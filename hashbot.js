@@ -175,13 +175,29 @@ function commandSeen(data) {
 	});
 }
 
+function commandTweet(data) {
+	if (data.userid == config.MASTERID || contains(moderatorsList, data.userid)) {
+		var option = data.text.slice(data.text.indexOf(' ')).trim();
+		if (option.match(/^song$/i)) {
+			var tag = '#nowplaying';
+			var tweet = currentDj.name + ' is playing: ' + currentSong.artist + ' - ' + currentSong.song;
+			if (tweet.length + (tag.length + 1) > 140) {
+				tweet = tweet.substring(0, (tweet.length - (tweet.length + (tweet.length + 1) - 140)));
+			}
+			sendTweet(tweet + ' ' + tag);
+		}
+		else {
+			sendTweet(option);
+		}
+	}
+}
+
 function sendTweet(data) {
-	var tag = '#nowplaying';
-	if (data.length + (tag.length + 1) > 140) {
-		data = data.substring(0, (data.length - (data.length + (tag.length + 1) - 140)));
+	if (data.length > 140) {
+		data = data.substring(0, 140);
 	}
 	oAuth.post("http://api.twitter.com/1/statuses/update.json", config.TWITTERACCESSTOKEN, config.TWITTERACCESSTOKENSECRET, {
-		"status": data + " #nowplaying"
+		"status": data
 	},
 	function(error, data) {
 		if (error) {
@@ -193,13 +209,9 @@ function sendTweet(data) {
 	});
 }
 
-function log(data, relay) {
-	relay = (typeof relay == 'undefined') ? false: relay;
+function log(data) {
 	var timestamp = new Date();
 	console.log(timestamp, data);
-	if (relay) {
-		sendTweet(data);
-	}
 }
 
 function connect_datasource() {
@@ -432,6 +444,9 @@ bot.on('speak', function(data) {
 	}
 	else if (data.text.match(/^!dj .*/i)) {
 		commandDj(data);
+	}
+	else if (data.text.match(/^!tweet .*/i)) {
+		commandTweet(data);
 	}
 });
 
