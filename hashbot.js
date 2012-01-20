@@ -182,7 +182,7 @@ function commandTweet(data) {
 			var tag = '#nowplaying';
 			var tweet = currentDj.name + ' is playing: ' + currentSong.artist + ' - ' + currentSong.song;
 			if (tweet.length + (tag.length + 1) > 140) {
-				tweet = tweet.substring(0, (tweet.length - (tweet.length + (tweet.length + 1) - 140)));
+				tweet = tweet.substring(0, (tweet.length - (tweet.length + (tag.length + 1) - 140)));
 			}
 			sendTweet(tweet + ' ' + tag);
 		}
