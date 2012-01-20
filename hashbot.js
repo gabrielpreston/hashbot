@@ -308,7 +308,7 @@ function newSong(data, roomchange) {
 		conn.destroy();
 	});
 	var dj_id = data.room.metadata.current_dj;
-	log(usersList[dj_id].name + ' started playing: ' + song.artist + ' - ' + song.song, (dj_id != config.USERID ? true: false));
+	log(usersList[dj_id].name + ' started playing: ' + song.artist + ' - ' + song.song);
 	djsList[dj_id].playCount += 1;
 	currentDj = djsList[dj_id];
 }
@@ -378,7 +378,7 @@ bot.on('roomChanged', function(data) {
 
 	currentRoom = data.room.roomid;
 
-	log('I joined a new room - http://turntable.fm/' + data.room.shortcut, true);
+	log('I joined a new room - http://turntable.fm/' + data.room.shortcut);
 	// log(data);
 	// Build the users list
 	for (var i = 0; i < data.users.length; i++) {
@@ -400,7 +400,7 @@ bot.on('roomChanged', function(data) {
 		ruleLame = 0;
 	}
 
-	newSong(data, true);
+	newSong(data);
 	upvoteCheck(data);
 });
 
