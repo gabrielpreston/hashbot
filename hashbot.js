@@ -29,6 +29,7 @@ var Mysql = require('mysql');
 var OAuth = require('oauth').OAuth;
 var timeago = require('timeago');
 var bot = new Bot(config.AUTH, config.USERID, config.ROOMID);
+var conn = connect_datasource();
 
 var usersList = {};
 var djsList = {};
@@ -57,7 +58,7 @@ function contains(a, obj) {
 
 function commandLame(data) {
 	if (data.userid == config.MASTERID) {
-		var option = data.text.split(" ", 2)[1];
+		var option = data.text.slice(data.text.indexOf(' ')).trim();
 		if (option.match(/enable/i)) {
 			ruleLame = 1;
 		}
@@ -69,7 +70,7 @@ function commandLame(data) {
 
 function commandDj(data) {
 	if (data.userid == config.MASTERID || contains(moderatorsList, data.userid)) {
-		var option = data.text.split(" ", 2)[1];
+		var option = data.text.slice(data.text.indexOf(' ')).trim();
 		if (option.match(/on/i)) {
 			bot.addDj();
 		}
@@ -81,7 +82,7 @@ function commandDj(data) {
 
 function commandSkin(data) {
 	if (data.userid == config.MASTERID || contains(moderatorsList, data.userid)) {
-		var option = data.text.split(" ", 2)[1];
+		var option = data.text.slice(data.text.indexOf(' ')).trim();
 		if (option.match(/[0-9]+/)) {
 			bot.setAvatar(option);
 		}
@@ -90,18 +91,20 @@ function commandSkin(data) {
 
 function commandSetname(data) {
 	if (data.userid == config.MASTERID) {
-		var option = data.text.split(" ", 2)[1];
+		var option = data.text.slice(data.text.indexOf(' ')).trim();
 		if (option.match(/[A-Za-z0-9-_\. ]+/)) {
-			bot.modifyName(option);
+			bot.modifyName(option, function setnameCb(name) {
+				log(name);
+			});
 		}
 	}
 }
 
 function commandStats(data) {
-	var option = data.text.split(" ", 2)[1];
+	var option = data.text.slice(data.text.indexOf(' ')).trim();
 	option = option.trim();
 	if (option.match(/^song$/i)) {
-		var conn = connect_datasource();
+		// var conn = connect_datasource();
 		conn.query('SELECT * FROM songs WHERE id=? AND room_id=?', [currentSong.id, currentRoom], function selectCb(err, results, fields) {
 			if (err) {
 				throw err;
@@ -111,7 +114,7 @@ function commandStats(data) {
 				bot.speak('This song has been played ' + results[0].playcount + ' time' + (results[0].playcount == 1 ? '': 's') + ', awesomed ' + results[0].awesomes + ' time' + (results[0].awesomes == 1 ? '': 's') + ', and snagged ' + results[0].snags + ' time' + (results[0].snags == 1 ? '': 's') + '.');
 			}
 		}).on('end', function() {
-			conn.destroy();
+			// conn.destroy();
 		});
 	}
 	else if (option.match(/^dj$/i)) {
@@ -128,9 +131,9 @@ function commandStats(data) {
 }
 
 function commandSeen(data) {
-	var option = data.text.split(" ", 2)[1];
+	var option = data.text.slice(data.text.indexOf(' ')).trim();
 	var user = [];
-	var conn = connect_datasource();
+	// var conn = connect_datasource();
 	conn.query('SELECT users.id AS id,users.name AS name FROM users JOIN last_seen ON users.name LIKE ? AND last_seen.user_id=users.id AND last_seen.room_id=?', ['%' + option + '%', currentRoom], function selectCb(err, results, fields) {
 		if (err) {
 			throw err;
@@ -142,20 +145,26 @@ function commandSeen(data) {
 		else if (results.length == 1) {
 			user = results[0];
 			if (usersList.hasOwnProperty(user.id)) {
-				bot.speak(user.name + ' is currently in the room!');
-				return;
+				if (user.name === usersList[user.id].name) {
+					bot.speak('What are you, NEW?! ' + user.name + ' is currently in the room!');
+				}
+				else {
+					bot.speak(user.name + ' is currently in the room as ' + usersList[user.id].name);
+				}
 			}
-			var sub_conn = connect_datasource();
-			sub_conn.query('SELECT timestamp FROM last_seen WHERE user_id=?', [user.id], function selectCb(err, results, fields) {
-				if (err) {
-					throw err;
-				}
-				if (results.length == 1) {
-					bot.speak('I last saw ' + user.name + ' ' + timeago(results[0].timestamp) + '.');
-				}
-			}).on('end', function() {
-				sub_conn.destroy();
-			});
+			else {
+				var sub_conn = connect_datasource();
+				sub_conn.query('SELECT timestamp FROM last_seen WHERE user_id=?', [user.id], function selectCb(err, results, fields) {
+					if (err) {
+						throw err;
+					}
+					if (results.length == 1) {
+						bot.speak('I last saw ' + user.name + ' ' + timeago(results[0].timestamp) + '.');
+					}
+				}).on('end', function() {
+					sub_conn.destroy();
+				});
+			}
 		}
 		else if (results.length > 6) {
 			bot.speak('There were too many people who matched that, please be more specific.');
@@ -171,7 +180,7 @@ function commandSeen(data) {
 			bot.speak('I am sorry, did you mean ' + users_string + '?');
 		}
 	}).on('end', function() {
-		conn.destroy();
+		// conn.destroy();
 	});
 }
 
@@ -219,7 +228,12 @@ function connect_datasource() {
 		user: config.MYSQL_USER,
 		password: config.MYSQL_PASS,
 	});
-	db.query('USE ' + config.MYSQL_DB);
+	db.useDatabase(config.MYSQL_DB, function(err) {
+		if (err) {
+			throw err;
+		}
+	});
+	// db.query('USE ' + config.MYSQL_DB);
 	return db;
 }
 
@@ -232,10 +246,10 @@ function saveSong() {
 	log('Updating Database with Song Information for: ' + currentSong.id);
 	// log(currentSong);
 	// Update database with newest information for this song
-	var conn = connect_datasource();
+	// var conn = connect_datasource();
 	conn.query('REPLACE INTO songs (id,room_id,awesomes,lames,snags,playcount) VALUES (?,?,?,?,?,?)', [
 	currentSong.id, currentRoom, currentSong.TotalAwesomes, currentSong.TotalLames, currentSong.Snagged, currentSong.PlayCount]).on('end', function() {
-		conn.destroy();
+		// conn.destroy();
 	});
 }
 
@@ -244,15 +258,15 @@ function updateLastSeen(data) {
 		return;
 	}
 	log('Updating user last seen for: ' + data.name);
-	var conn = connect_datasource();
+	// var conn = connect_datasource();
 	conn.query('REPLACE INTO last_seen (user_id,room_id,timestamp) VALUES (?,?,?)', [
 	data.userid, currentRoom, new Date()]).on('end', function() {
-		conn.destroy();
+		// conn.destroy();
 	});
-	var conn = connect_datasource();
+	// var conn = connect_datasource();
 	conn.query('REPLACE INTO users (id,name) VALUES (?,?)', [
 	data.userid, data.name]).on('end', function() {
-		conn.destroy();
+		// conn.destroy();
 	});
 }
 
@@ -288,7 +302,7 @@ function newSong(data, roomchange) {
 	log('Default Song Information: ' + song_id);
 	// log(song);
 	// Do we already have info on this song?  Lets try to pull it up
-	var conn = connect_datasource();
+	// var conn = connect_datasource();
 	conn.query('SELECT * FROM songs WHERE id=? AND room_id=?', [song_id, currentRoom], function selectCb(err, results, fields) {
 		if (err) {
 			throw err;
@@ -305,15 +319,23 @@ function newSong(data, roomchange) {
 	}).on('end', function() {
 		currentSong = song;
 		saveSong();
-		conn.destroy();
+		// conn.destroy();
 	});
 	var dj_id = data.room.metadata.current_dj;
 	log(usersList[dj_id].name + ' started playing: ' + song.artist + ' - ' + song.song);
+	if (tcpUser) {
+		tcpSocket.write('>> ' + usersList[dj_id].name + ' started playing: ' + song.artist + ' - ' + song.song + '\n');
+	}
 	djsList[dj_id].playCount += 1;
 	currentDj = djsList[dj_id];
+
+	upvoteCheck(data);
 }
 
 function upvoteCheck(data) {
+	if (currentSong === null) {
+		return;
+	}
 	for (var i = 0; i < data.room.metadata.votelog.length; i++) {
 		if (data.room.metadata.votelog[i][0] == config.USERID) {
 			log('I already voted for this song.  No need to continue.');
@@ -330,7 +352,7 @@ function upvoteCheck(data) {
 	}
 }
 
-console.log("STARTING UP!");
+log("STARTING UP!");
 
 oAuth = new OAuth("https://api.twitter.com/oauth/request_token", "https://api.twitter.com/oauth/access_token", config.TWITTERCONSUMERKEY, config.TWITTERCONSUMERSECRET, "1.0A", null, "HMAC-SHA1");
 
@@ -401,7 +423,7 @@ bot.on('roomChanged', function(data) {
 	}
 
 	newSong(data);
-	upvoteCheck(data);
+	// upvoteCheck(data);
 });
 
 // Someone entered the room, add entry to users list.
@@ -514,5 +536,11 @@ bot.on('newsong', function(data) {
 	// Retrieve current playing song info
 	log('Someone started playing a song.');
 	newSong(data);
+});
+
+// What to do when no song is playing?
+bot.on('nosong', function(data) {
+	// Figure this out later, just log the data for now
+	log('No song is playing, zogads!', data);
 });
 
