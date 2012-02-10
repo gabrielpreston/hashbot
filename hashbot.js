@@ -293,7 +293,8 @@ function newSong(data) {
 			if (song.StartTime == results[0].starttime) {
 				// Catch up on any missed votes while gone
 				log('This is the same song from before: ' + song.StartTime + ', ' + results[0].starttime);
-				updateSongVotes(song.CurrentAwesomes - results[0].currentawesomes, song.CurrentLames - results[0].currentlames);
+				song.TotalAwesomes = song.CurrentAwesomes - results[0].currentawesomes;
+				song.TotalLames = song.CurrentLames - results[0].currentlames;
 			}
 			else {
 				// Start time doesn't match, so this isn't the same occurrence of what is in the DB, lets increment the playcount
