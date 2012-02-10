@@ -290,7 +290,7 @@ function newSong(data) {
 			song.TotalLames = results[0].lames;
 			song.Snagged = results[0].snags;
 			song.PlayCount = results[0].playcount;
-			if (song.StartTime === results[0].starttime) {
+			if (song.StartTime == results[0].starttime) {
 				// Catch up on any missed votes while gone
 				log('This is the same song from before: ' + song.StartTime + ', ' + results[0].starttime);
 				updateSongVotes(song.CurrentAwesomes - results[0].currentawesomes, song.CurrentLames - results[0].currentlames);
