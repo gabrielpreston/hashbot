@@ -277,7 +277,7 @@ function newSong(data) {
 	song.CurrentSnags = 0;
 	song.PlayCount = 1;
 	song.StartTime = current_song.starttime;
-	log('Default Song Information: ' + song_id);
+	log('Set Default Song Information: ' + song_id);
 	// Do we already have info on this song?  Lets try to pull it up
 	conn.query('SELECT * FROM songs WHERE id=? AND room_id=?', [song_id, currentRoom], function selectCb(err, results, fields) {
 		if (err) {
@@ -285,23 +285,20 @@ function newSong(data) {
 		}
 		// Found info, lets add it to the current song info
 		if (results.length === 1) {
-			log(results);
 			song.TotalAwesomes = results[0].awesomes;
 			song.TotalLames = results[0].lames;
 			song.Snagged = results[0].snags;
 			song.PlayCount = results[0].playcount;
 			if (song.StartTime == results[0].starttime) {
 				// Catch up on any missed votes while gone
-				log('This is the same song from before: ' + song.StartTime + ', ' + results[0].starttime);
-				song.TotalAwesomes = song.CurrentAwesomes - results[0].currentawesomes;
-				song.TotalLames = song.CurrentLames - results[0].currentlames;
+				song.TotalAwesomes += song.CurrentAwesomes - results[0].currentawesomes;
+				song.TotalLames += song.CurrentLames - results[0].currentlames;
 			}
 			else {
 				// Start time doesn't match, so this isn't the same occurrence of what is in the DB, lets increment the playcount
-				log('This is NOT the same song from before: ' + song.StartTime + ', ' + results[0].starttime);
 				song.PlayCount += 1;
 			}
-			log('Updated Song Information: ' + song_id);
+			log('Updated Song Information from Database: ' + song_id);
 		}
 	}).on('end', function() {
 		currentSong = song;
@@ -407,7 +404,8 @@ bot.on('roomChanged', function(data) {
 	}
 
 	moderatorsList = data.room.metadata.moderator_id;
-
+	
+	// Default is don't allow laming
 	if (currentRoom === config.ROOMID) {
 		ruleLame = 1;
 	}
@@ -415,6 +413,7 @@ bot.on('roomChanged', function(data) {
 		ruleLame = 0;
 	}
 
+	// Don't continue if there isn't a song playing
 	if (data.room.metadata.current_song !== null) {
 		newSong(data.room.metadata);
 	}
