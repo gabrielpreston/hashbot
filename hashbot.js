@@ -8,6 +8,7 @@
 //    getUidByName();
 //    getNameByUid();
 //    etc...
+//    Bit.ly URLs in Tweets - https://github.com/tanepiper/node-bitly
 //
 // Modulize/pluginize different commands so they can be dropped into a directory and auto added to bot?
 //    Something like this?  No idea yet
@@ -37,7 +38,6 @@ var moderatorsList = [];
 var currentSong = null;
 var currentDj = null;
 var currentRoom = null;
-var roomChange = 0;
 var ruleLame = 1;
 var tcpUser = 0;
 var tcpSocket = null;
@@ -97,6 +97,9 @@ function commandSetname(data) {
 				log(name);
 			});
 		}
+		else {
+			log('An invalid name was passed to commandSetname: '+option);
+		}
 	}
 }
 
@@ -104,7 +107,6 @@ function commandStats(data) {
 	var option = data.text.slice(data.text.indexOf(' ')).trim();
 	option = option.trim();
 	if (option.match(/^song$/i)) {
-		// var conn = connect_datasource();
 		conn.query('SELECT * FROM songs WHERE id=? AND room_id=?', [currentSong.id, currentRoom], function selectCb(err, results, fields) {
 			if (err) {
 				throw err;
@@ -114,7 +116,7 @@ function commandStats(data) {
 				bot.speak('This song has been played ' + results[0].playcount + ' time' + (results[0].playcount == 1 ? '': 's') + ', awesomed ' + results[0].awesomes + ' time' + (results[0].awesomes == 1 ? '': 's') + ', and snagged ' + results[0].snags + ' time' + (results[0].snags == 1 ? '': 's') + '.');
 			}
 		}).on('end', function() {
-			// conn.destroy();
+			// Do I want to do anything here?
 		});
 	}
 	else if (option.match(/^dj$/i)) {
@@ -125,7 +127,6 @@ function commandStats(data) {
 		for (var i in djsList) {
 			playcounts.push(djsList[i].playCount);
 		}
-		// var playcounts = _.pluck(djsList,'playCount');
 		bot.speak('Current song counts per DJ are ' + playcounts.join(' : '));
 	}
 }
@@ -133,12 +134,10 @@ function commandStats(data) {
 function commandSeen(data) {
 	var option = data.text.slice(data.text.indexOf(' ')).trim();
 	var user = [];
-	// var conn = connect_datasource();
 	conn.query('SELECT users.id AS id,users.name AS name FROM users JOIN last_seen ON users.name LIKE ? AND last_seen.user_id=users.id AND last_seen.room_id=?', ['%' + option + '%', currentRoom], function selectCb(err, results, fields) {
 		if (err) {
 			throw err;
 		}
-		// log(results);
 		if (results.length == 0) {
 			bot.speak('I have never seen anyone with a name containing that string.');
 		}
@@ -176,11 +175,10 @@ function commandSeen(data) {
 			}
 			var users_string = users_array.join(', ');
 			users_string += ' or ' + results[results.length - 1].name;
-			// log(users_string);
 			bot.speak('I am sorry, did you mean ' + users_string + '?');
 		}
 	}).on('end', function() {
-		// conn.destroy();
+		// Do I want to do anything here?
 	});
 }
 
@@ -233,7 +231,6 @@ function connect_datasource() {
 			throw err;
 		}
 	});
-	// db.query('USE ' + config.MYSQL_DB);
 	return db;
 }
 
@@ -244,12 +241,8 @@ function updateSongVotes(up, down) {
 
 function saveSong() {
 	log('Updating Database with Song Information for: ' + currentSong.id);
-	// log(currentSong);
-	// Update database with newest information for this song
-	// var conn = connect_datasource();
-	conn.query('REPLACE INTO songs (id,room_id,awesomes,lames,snags,playcount) VALUES (?,?,?,?,?,?)', [
-	currentSong.id, currentRoom, currentSong.TotalAwesomes, currentSong.TotalLames, currentSong.Snagged, currentSong.PlayCount]).on('end', function() {
-		// conn.destroy();
+	conn.query('REPLACE INTO songs (id,room_id,awesomes,lames,snags,playcount,starttime,currentawesomes,currentlames) ' + 'VALUES (?,?,?,?,?,?,?,?,?)', [currentSong.id, currentRoom, currentSong.TotalAwesomes, currentSong.TotalLames, currentSong.Snagged, currentSong.PlayCount, currentSong.StartTime, currentSong.CurrentAwesomes, currentSong.CurrentLames]).on('end', function() {
+		// Do I want to do anything here?
 	});
 }
 
@@ -258,35 +251,21 @@ function updateLastSeen(data) {
 		return;
 	}
 	log('Updating user last seen for: ' + data.name);
-	// var conn = connect_datasource();
 	conn.query('REPLACE INTO last_seen (user_id,room_id,timestamp) VALUES (?,?,?)', [
 	data.userid, currentRoom, new Date()]).on('end', function() {
-		// conn.destroy();
+		// Do I want to do anything here?
 	});
-	// var conn = connect_datasource();
 	conn.query('REPLACE INTO users (id,name) VALUES (?,?)', [
 	data.userid, data.name]).on('end', function() {
-		// conn.destroy();
+		// Do I want to do anything here?
 	});
 }
 
-function newSong(data, roomchange) {
-	roomchange = (typeof roomchange == 'undefined') ? false: roomchange;
-
-	// Last song ended, lets tally up the previous song's awesomes/lames and save the data
-	if (currentSong != null) {
-		log('A new song has started, updating and saving previous song information.');
-		saveSong();
-	}
-
+function newSong(data) {
+	log('Function newSong called.');
+	log(data);
 	// Grab the new song info
-	var current_song = data.room.metadata.current_song;
-
-	// No song currently playing?  No need to continue!
-	if (current_song == null) {
-		log('No song is playing, do not continue.');
-		return;
-	}
+	var current_song = data.current_song;
 
 	var song_id = current_song._id;
 
@@ -295,14 +274,13 @@ function newSong(data, roomchange) {
 	song.id = song_id;
 	song.TotalAwesomes = 0;
 	song.TotalLames = 0;
-	song.CurrentAwesomes = data.room.metadata.upvotes;
-	song.CurrentLames = data.room.metadata.downvotes;
+	song.CurrentAwesomes = data.upvotes;
+	song.CurrentLames = data.downvotes;
 	song.Snagged = 0;
 	song.PlayCount = 1;
+	song.StartTime = current_song.starttime;
 	log('Default Song Information: ' + song_id);
-	// log(song);
 	// Do we already have info on this song?  Lets try to pull it up
-	// var conn = connect_datasource();
 	conn.query('SELECT * FROM songs WHERE id=? AND room_id=?', [song_id, currentRoom], function selectCb(err, results, fields) {
 		if (err) {
 			throw err;
@@ -312,16 +290,18 @@ function newSong(data, roomchange) {
 			song.TotalAwesomes = results[0].awesomes;
 			song.TotalLames = results[0].lames;
 			song.Snagged = results[0].snags;
-			song.PlayCount = results[0].playcount + (roomchange ? 0: 1);
+			song.PlayCount = results[0].playcount;
+			if (song.StartTime === results[0].starttime) {
+				log('This is the same song from before.');
+				updateSongVotes(song.CurrentAwesomes - results[0].currentawesomes, song.CurrentLames - results[0].currentlames);
+			}
 			log('Updated Song Information: ' + song_id);
-			// log(song);
 		}
 	}).on('end', function() {
 		currentSong = song;
 		saveSong();
-		// conn.destroy();
 	});
-	var dj_id = data.room.metadata.current_dj;
+	var dj_id = data.current_dj;
 	log(usersList[dj_id].name + ' started playing: ' + song.artist + ' - ' + song.song);
 	if (tcpUser) {
 		tcpSocket.write('>> ' + usersList[dj_id].name + ' started playing: ' + song.artist + ' - ' + song.song + '\n');
@@ -332,23 +312,33 @@ function newSong(data, roomchange) {
 	upvoteCheck(data);
 }
 
+function endSong(data) {
+	log('Function endSong called.');
+	log(data);
+	if (data.room === null) {
+		return;
+	}
+	log(data.room.metadata.current_song);
+	saveSong();
+}
+
 function upvoteCheck(data) {
 	if (currentSong === null) {
 		return;
 	}
-	for (var i = 0; i < data.room.metadata.votelog.length; i++) {
-		if (data.room.metadata.votelog[i][0] == config.USERID) {
+	for (var i = 0; i < data.votelog.length; i++) {
+		if (data.votelog[i][0] == config.USERID) {
 			log('I already voted for this song.  No need to continue.');
 			return;
 		}
 	}
-	var votesNeeded = (data.room.metadata.listeners - 1) / 2;
-	if (data.room.metadata.upvotes > votesNeeded) {
+	var votesNeeded = (data.listeners - 1) / 2;
+	if (data.upvotes > votesNeeded) {
 		bot.vote('up');
 		log('I voted up song ' + currentSong.id + ': ' + currentSong.artist + ' - ' + currentSong.song + '.');
 	}
 	else {
-		log('There are not enough votes for me to awesome this song yet.  Have ' + data.room.metadata.upvotes + ' but need more than ' + votesNeeded + '.');
+		log('There are not enough votes for me to awesome this song yet.  Have ' + data.upvotes + ' but need more than ' + votesNeeded + '.');
 	}
 }
 
@@ -401,7 +391,6 @@ bot.on('roomChanged', function(data) {
 	currentRoom = data.room.roomid;
 
 	log('I joined a new room - http://turntable.fm/' + data.room.shortcut);
-	// log(data);
 	// Build the users list
 	for (var i = 0; i < data.users.length; i++) {
 		var user = data.users[i];
@@ -422,8 +411,9 @@ bot.on('roomChanged', function(data) {
 		ruleLame = 0;
 	}
 
-	newSong(data);
-	// upvoteCheck(data);
+	if (data.room.metadata.current_song !== null) {
+		newSong(data.room.metadata);
+	}
 });
 
 // Someone entered the room, add entry to users list.
@@ -494,7 +484,7 @@ bot.on('update_votes', function(data) {
 		log('This song now has ' + currentSong.CurrentAwesomes + ' awesomes and ' + currentSong.CurrentLames + ' lames.');
 		saveSong();
 
-		upvoteCheck(data);
+		upvoteCheck(data.room.metadata);
 
 		if (data.room.metadata.upvotes / (data.room.metadata.listeners - 1) * 100 >= config.MINTOADDTOPL && data.room.metadata.listeners > 6) {
 			log('Adding ' + currentSong.artist + ' - ' + currentSong.song + ' to my playlist.');
@@ -535,7 +525,14 @@ bot.on('rem_dj', function(data) {
 bot.on('newsong', function(data) {
 	// Retrieve current playing song info
 	log('Someone started playing a song.');
-	newSong(data);
+	newSong(data.room.metadata);
+});
+
+// Song ended!
+bot.on('endsong', function(data) {
+	// Save the song information
+	log('The current song just finished playing.');
+	endSong(data);
 });
 
 // What to do when no song is playing?
