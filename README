@@ -23,11 +23,14 @@ CREATE TABLE IF NOT EXISTS `last_seen` (
 CREATE TABLE IF NOT EXISTS `songs` (
   `id` varchar(24) COLLATE utf8_unicode_ci NOT NULL,
   `room_id` varchar(24) COLLATE utf8_unicode_ci NOT NULL,
-  `awesomes` int(11) NOT NULL,
-  `lames` int(11) NOT NULL,
-  `snags` int(11) NOT NULL,
-  `playcount` int(11) NOT NULL,
+  `awesomes` int(11) NOT NULL DEFAULT '0',
+  `lames` int(11) NOT NULL DEFAULT '0',
+  `snags` int(11) NOT NULL DEFAULT '0',
+  `playcount` int(11) NOT NULL DEFAULT '0',
   `lastplayed` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `starttime` varchar(13) COLLATE utf8_unicode_ci NOT NULL,
+  `currentawesomes` int(11) NOT NULL DEFAULT '0',
+  `currentlames` int(11) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`,`room_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
