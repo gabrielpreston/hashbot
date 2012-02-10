@@ -28,6 +28,8 @@ var Bot = require('ttapi');
 var Mysql = require('mysql');
 var OAuth = require('oauth').OAuth;
 var timeago = require('timeago');
+var Bitly = require('bitly');
+var bitly = new Bitly(config.BITLYUSER,config.BITLYAPIKEY);
 var bot = new Bot(config.AUTH, config.USERID, config.ROOMID);
 var conn = connect_datasource();
 
@@ -97,7 +99,7 @@ function commandSetname(data) {
 			});
 		}
 		else {
-			log('An invalid name was passed to commandSetname: '+option);
+			log('An invalid name was passed to commandSetname: ' + option);
 		}
 	}
 }
@@ -199,6 +201,19 @@ function commandTweet(data) {
 }
 
 function sendTweet(data) {
+	var url_regex = /[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b((\/)?[-a-zA-Z0-9@:%_\+.~#\?&//=]*)?/;
+
+	if (result = data.match(url_regex)) {
+		var long_url = result[0];
+		log('Found URL: '+long_url);
+		bitly.shorten(long_url, function(err, response) {
+			if (err) throw err;
+			var short_url = response.data.url
+			data = data.replace(long_url,short_url);
+			bot.speak('I shortened your tweet to: '+data);
+		});
+	}
+
 	if (data.length > 140) {
 		data = data.substring(0, 140);
 	}
@@ -404,7 +419,7 @@ bot.on('roomChanged', function(data) {
 	}
 
 	moderatorsList = data.room.metadata.moderator_id;
-	
+
 	// Default is don't allow laming
 	if (currentRoom === config.ROOMID) {
 		ruleLame = 1;
@@ -543,3 +558,4 @@ bot.on('nosong', function(data) {
 	// Figure this out later, just log the data for now
 	log('No song is playing, zogads!', data);
 });
+

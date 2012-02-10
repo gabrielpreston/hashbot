@@ -15,4 +15,8 @@ config.TWITTERCONSUMERSECRET = '';
 config.TWITTERACCESSTOKEN = '';
 config.TWITTERACCESSTOKENSECRET = '';
 
+// http://bitly.com/a/your_api_key/
+config.BITLYUSER = '';
+config.BITLYAPIKEY = '';
+
 exports.config = config;
