@@ -260,8 +260,6 @@ function updateLastSeen(data) {
 }
 
 function newSong(data) {
-	log('Function newSong called.');
-	log(data);
 	// Grab the new song info
 	var current_song = data.current_song;
 
@@ -311,12 +309,9 @@ function newSong(data) {
 }
 
 function endSong(data) {
-	log('Function endSong called.');
-	log(data);
 	if (data.room === null) {
 		return;
 	}
-	log(data.room.metadata.current_song);
 	saveSong();
 	bot.speak(currentSong.artist + ' - ' + currentSong.song + ' was awesomed ' + currentSong.CurrentAwesomes + ' time' + (currentSong.CurrentAwesomes === 1 ? '': 's') + ', and snagged ' + currentSong.Snagged + ' time' + (currentSong.Snagged === 1 ? '': 's') + '.');
 }
@@ -539,4 +534,3 @@ bot.on('nosong', function(data) {
 	// Figure this out later, just log the data for now
 	log('No song is playing, zogads!', data);
 });
-
