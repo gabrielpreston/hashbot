@@ -19,10 +19,8 @@
 //
 // Bugs to be fixed
 //    Twitter messages > 140 chars [FIXED]
-//    Timeout/disconnect from MySQL DB [FIXED]
-//       Not really happy with my current solution of connecting then disconnecting for each query.  Is this the best method?
+//    Timeout/disconnect from MySQL DB
 //       Switch to Sequelize? http://sequelizejs.com/#installation
-//    Getting a 'Too Many Connections' error from MySQL.  Is this because the sessions aren't terminating properly?
 //
 var config = require('./config').config;
 var Bot = require('ttapi');
@@ -57,7 +55,7 @@ function contains(a, obj) {
 }
 
 function commandLame(data) {
-	if (data.userid == config.MASTERID) {
+	if (data.userid === config.MASTERID) {
 		var option = data.text.slice(data.text.indexOf(' ')).trim();
 		if (option.match(/enable/i)) {
 			ruleLame = 1;
@@ -69,7 +67,7 @@ function commandLame(data) {
 }
 
 function commandDj(data) {
-	if (data.userid == config.MASTERID || contains(moderatorsList, data.userid)) {
+	if (data.userid === config.MASTERID || contains(moderatorsList, data.userid)) {
 		var option = data.text.slice(data.text.indexOf(' ')).trim();
 		if (option.match(/on/i)) {
 			bot.addDj();
@@ -81,7 +79,7 @@ function commandDj(data) {
 }
 
 function commandSkin(data) {
-	if (data.userid == config.MASTERID || contains(moderatorsList, data.userid)) {
+	if (data.userid === config.MASTERID || contains(moderatorsList, data.userid)) {
 		var option = data.text.slice(data.text.indexOf(' ')).trim();
 		if (option.match(/[0-9]+/)) {
 			bot.setAvatar(option);
@@ -90,7 +88,7 @@ function commandSkin(data) {
 }
 
 function commandSetname(data) {
-	if (data.userid == config.MASTERID) {
+	if (data.userid === config.MASTERID) {
 		var option = data.text.slice(data.text.indexOf(' ')).trim();
 		if (option.match(/[A-Za-z0-9-_\. ]+/)) {
 			bot.modifyName(option, function setnameCb(name) {
@@ -112,15 +110,15 @@ function commandStats(data) {
 				throw err;
 			}
 			// Found info, lets give it
-			if (results.length == 1) {
-				bot.speak('This song has been played ' + results[0].playcount + ' time' + (results[0].playcount == 1 ? '': 's') + ', awesomed ' + results[0].awesomes + ' time' + (results[0].awesomes == 1 ? '': 's') + ', and snagged ' + results[0].snags + ' time' + (results[0].snags == 1 ? '': 's') + '.');
+			if (results.length === 1) {
+				bot.speak('This song has been played ' + results[0].playcount + ' time' + (results[0].playcount === 1 ? '': 's') + ', awesomed ' + results[0].awesomes + ' time' + (results[0].awesomes === 1 ? '': 's') + ', and snagged ' + results[0].snags + ' time' + (results[0].snags === 1 ? '': 's') + '.');
 			}
 		}).on('end', function() {
 			// Do I want to do anything here?
 		});
 	}
 	else if (option.match(/^dj$/i)) {
-		bot.speak(currentDj.name + ' has played ' + currentDj.playCount + ' song' + (currentDj.playCount == 1 ? '': 's') + ' during this set.');
+		bot.speak(currentDj.name + ' has played ' + currentDj.playCount + ' song' + (currentDj.playCount === 1 ? '': 's') + ' during this set.');
 	}
 	else if (option.match(/^djs$/i)) {
 		var playcounts = [];
@@ -138,10 +136,10 @@ function commandSeen(data) {
 		if (err) {
 			throw err;
 		}
-		if (results.length == 0) {
+		if (results.length === 0) {
 			bot.speak('I have never seen anyone with a name containing that string.');
 		}
-		else if (results.length == 1) {
+		else if (results.length === 1) {
 			user = results[0];
 			if (usersList.hasOwnProperty(user.id)) {
 				if (user.name === usersList[user.id].name) {
@@ -157,7 +155,7 @@ function commandSeen(data) {
 					if (err) {
 						throw err;
 					}
-					if (results.length == 1) {
+					if (results.length === 1) {
 						bot.speak('I last saw ' + user.name + ' ' + timeago(results[0].timestamp) + '.');
 					}
 				}).on('end', function() {
@@ -183,7 +181,7 @@ function commandSeen(data) {
 }
 
 function commandTweet(data) {
-	if (data.userid == config.MASTERID || contains(moderatorsList, data.userid)) {
+	if (data.userid === config.MASTERID || contains(moderatorsList, data.userid)) {
 		var option = data.text.slice(data.text.indexOf(' ')).trim();
 		if (option.match(/^song$/i)) {
 			var tag = '#nowplaying';
@@ -247,7 +245,7 @@ function saveSong() {
 }
 
 function updateLastSeen(data) {
-	if (currentRoom == null || data.userid == config.USERID) {
+	if (currentRoom === null || data.userid === config.USERID) {
 		return;
 	}
 	log('Updating user last seen for: ' + data.name);
@@ -286,7 +284,7 @@ function newSong(data) {
 			throw err;
 		}
 		// Found info, lets add it to the current song info
-		if (results.length == 1) {
+		if (results.length === 1) {
 			song.TotalAwesomes = results[0].awesomes;
 			song.TotalLames = results[0].lames;
 			song.Snagged = results[0].snags;
@@ -320,6 +318,7 @@ function endSong(data) {
 	}
 	log(data.room.metadata.current_song);
 	saveSong();
+	bot.speak(currentSong.artist + ' - ' + currentSong.song + ' was awesomed ' + currentSong.CurrentAwesomes + ' time' + (currentSong.CurrentAwesomes === 1 ? '': 's') + ', and snagged ' + currentSong.Snagged + ' time' + (currentSong.Snagged === 1 ? '': 's') + '.');
 }
 
 function upvoteCheck(data) {
@@ -327,7 +326,7 @@ function upvoteCheck(data) {
 		return;
 	}
 	for (var i = 0; i < data.votelog.length; i++) {
-		if (data.votelog[i][0] == config.USERID) {
+		if (data.votelog[i][0] === config.USERID) {
 			log('I already voted for this song.  No need to continue.');
 			return;
 		}
@@ -404,7 +403,7 @@ bot.on('roomChanged', function(data) {
 
 	moderatorsList = data.room.metadata.moderator_id;
 
-	if (currentRoom == config.ROOMID) {
+	if (currentRoom === config.ROOMID) {
 		ruleLame = 1;
 	}
 	else {
@@ -470,7 +469,7 @@ bot.on('update_votes', function(data) {
 			usersList[userid].lastActivity = new Date();
 			log(usersList[userid].name + ' voted ' + votelog[i][1] + ' for the song: ' + currentSong.artist + ' - ' + currentSong.song + '.');
 		}
-		if (votelog[i][1] == "down" && ruleLame) {
+		if (votelog[i][1] === "down" && ruleLame) {
 			if (userid != '') {
 				bot.speak('Hey! No laming, ' + usersList[userid].name + '!');
 			}
@@ -500,7 +499,7 @@ bot.on('snagged', function(data) {
 	usersList[userid].lastActivity = new Date();
 	log(usersList[userid].name + ' snagged the song ' + currentSong.artist + ' - ' + currentSong.song);
 	currentSong.Snagged += 1;
-	log('This song has been snagged ' + currentSong.Snagged + ' time' + (currentSong.Snagged == 1 ? '.': 's.'));
+	log('This song has been snagged ' + currentSong.Snagged + ' time' + (currentSong.Snagged === 1 ? '.': 's.'));
 	saveSong();
 });
 
