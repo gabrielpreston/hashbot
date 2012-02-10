@@ -9,6 +9,7 @@
 //    getNameByUid();
 //    etc...
 //    Bit.ly URLs in Tweets - https://github.com/tanepiper/node-bitly
+//         [-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b((\/)?[-a-zA-Z0-9@:%_\+.~#\?&//=]*)?
 //
 // Modulize/pluginize different commands so they can be dropped into a directory and auto added to bot?
 //    Something like this?  No idea yet
@@ -273,6 +274,7 @@ function newSong(data) {
 	song.CurrentAwesomes = data.upvotes;
 	song.CurrentLames = data.downvotes;
 	song.Snagged = 0;
+	song.CurrentSnags = 0;
 	song.PlayCount = 1;
 	song.StartTime = current_song.starttime;
 	log('Default Song Information: ' + song_id);
@@ -313,7 +315,7 @@ function endSong(data) {
 		return;
 	}
 	saveSong();
-	bot.speak(currentSong.artist + ' - ' + currentSong.song + ' was awesomed ' + currentSong.CurrentAwesomes + ' time' + (currentSong.CurrentAwesomes === 1 ? '': 's') + ', and snagged ' + currentSong.Snagged + ' time' + (currentSong.Snagged === 1 ? '': 's') + '.');
+	bot.speak(currentSong.artist + ' - ' + currentSong.song + ' was awesomed ' + currentSong.CurrentAwesomes + ' time' + (currentSong.CurrentAwesomes === 1 ? '': 's') + ', and snagged ' + currentSong.CurrentSnags + ' time' + (currentSong.CurrentSnags === 1 ? '': 's') + '.');
 }
 
 function upvoteCheck(data) {
@@ -460,16 +462,16 @@ bot.on('update_votes', function(data) {
 	var votelog = data.room.metadata.votelog;
 	for (var i = 0; i < votelog.length; i++) {
 		var userid = votelog[i][0];
-		if (userid != '') {
+		if (userid !== '') {
 			usersList[userid].lastActivity = new Date();
 			log(usersList[userid].name + ' voted ' + votelog[i][1] + ' for the song: ' + currentSong.artist + ' - ' + currentSong.song + '.');
 		}
 		if (votelog[i][1] === "down" && ruleLame) {
-			if (userid != '') {
-				bot.speak('Hey! No laming, ' + usersList[userid].name + '!');
+			if (userid !== '') {
+				bot.speak('Hey! No laming/thumbs downing, ' + usersList[userid].name + '!');
 			}
 			else {
-				bot.speak('Hey! No laming! Follow the rules!');
+				bot.speak('Hey! No laming/thumbs downing! Follow the rules!');
 			}
 		}
 		updateSongVotes(data.room.metadata.upvotes - currentSong.CurrentAwesomes, data.room.metadata.downvotes - currentSong.CurrentLames);
@@ -494,6 +496,7 @@ bot.on('snagged', function(data) {
 	usersList[userid].lastActivity = new Date();
 	log(usersList[userid].name + ' snagged the song ' + currentSong.artist + ' - ' + currentSong.song);
 	currentSong.Snagged += 1;
+	currentSong.CurrentSnags += 1;
 	log('This song has been snagged ' + currentSong.Snagged + ' time' + (currentSong.Snagged === 1 ? '.': 's.'));
 	saveSong();
 });
@@ -501,8 +504,8 @@ bot.on('snagged', function(data) {
 // Someone stepped up to DJ Booth
 bot.on('add_dj', function(data) {
 	var user = data.user[0];
+	user.playCount = 0;
 	djsList[user.userid] = user;
-	djsList[user.userid].playCount = 0;
 	usersList[user.userid].lastActivity = new Date();
 	log(user.name + ' has become a DJ.');
 });
@@ -518,7 +521,6 @@ bot.on('rem_dj', function(data) {
 // Track song information
 bot.on('newsong', function(data) {
 	// Retrieve current playing song info
-	log('Someone started playing a song.');
 	newSong(data.room.metadata);
 });
 
