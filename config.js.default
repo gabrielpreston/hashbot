@@ -19,4 +19,7 @@ config.TWITTERACCESSTOKENSECRET = '';
 config.BITLYUSER = '';
 config.BITLYAPIKEY = '';
 
+// http://products.wolframalpha.com/api/
+config.WOLFRAM = '';
+
 exports.config = config;

@@ -29,8 +29,9 @@ var Mysql = require('mysql');
 var OAuth = require('oauth').OAuth;
 var timeago = require('timeago');
 var Bitly = require('bitly');
-var bitly = new Bitly(config.BITLYUSER,config.BITLYAPIKEY);
+var bitly = new Bitly(config.BITLYUSER, config.BITLYAPIKEY);
 var bot = new Bot(config.AUTH, config.USERID, config.ROOMID);
+var wolfram = require('wolfram').createClient(config.WOLFRAM);
 var conn = connect_datasource();
 
 var usersList = {};
@@ -200,17 +201,37 @@ function commandTweet(data) {
 	}
 }
 
+function commandAsk(data) {
+	var requestor = data.name;
+	var option = data.text.slice(data.text.indexOf(' ')).trim();
+	wolfram.query(option, function(err, result) {
+		if (err) {
+			throw err;
+		}
+		var output = result.filter(function(x) {
+			return x.primary;
+		});
+		if (output.length == 0) {
+			bot.speak('@' + requestor + ' - I could not find an answer, sorry.');
+			return;
+		}
+		else {
+			var answer = output[0].subpods[0].value;
+			bot.speak('@' + requestor + ' - ' + answer);
+		}
+	});
+}
+
 function sendTweet(data) {
 	var url_regex = /[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b((\/)?[-a-zA-Z0-9@:%_\+.~#\?&//=]*)?/;
-
 	if (result = data.match(url_regex)) {
 		var long_url = result[0];
-		log('Found URL: '+long_url);
+		log('Found URL: ' + long_url);
 		bitly.shorten(long_url, function(err, response) {
 			if (err) throw err;
 			var short_url = response.data.url
-			data = data.replace(long_url,short_url);
-			bot.speak('I shortened your tweet to: '+data);
+			data = data.replace(long_url, short_url);
+			bot.speak('I shortened your tweet to: ' + data);
 		});
 	}
 
@@ -477,6 +498,9 @@ bot.on('speak', function(data) {
 	}
 	else if (data.text.match(/^!tweet .*/i)) {
 		commandTweet(data);
+	}
+	else if (data.text.match(/^!ask .*/i)) {
+		commandAsk(data);
 	}
 });
 
