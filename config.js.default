@@ -22,4 +22,6 @@ config.BITLYAPIKEY = '';
 // http://products.wolframalpha.com/api/
 config.WOLFRAM = '';
 
+config.URLREGEX = /[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b((\/)?[-a-zA-Z0-9@:%_\+.~#\?&//=]*)?/;
+
 exports.config = config;

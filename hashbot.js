@@ -223,12 +223,14 @@ function commandAsk(data) {
 }
 
 function sendTweet(data) {
-	var url_regex = /[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b((\/)?[-a-zA-Z0-9@:%_\+.~#\?&//=]*)?/;
+	var url_regex = config.URLREGEX;
 	if (result = data.match(url_regex)) {
 		var long_url = result[0];
 		log('Found URL: ' + long_url);
 		bitly.shorten(long_url, function(err, response) {
-			if (err) throw err;
+			if (err) {
+				throw err;
+			}
 			var short_url = response.data.url
 			data = data.replace(long_url, short_url);
 			bot.speak('I shortened your tweet to: ' + data);
@@ -382,6 +384,11 @@ function upvoteCheck(data) {
 log("STARTING UP!");
 
 oAuth = new OAuth("https://api.twitter.com/oauth/request_token", "https://api.twitter.com/oauth/access_token", config.TWITTERCONSUMERKEY, config.TWITTERCONSUMERSECRET, "1.0A", null, "HMAC-SHA1");
+
+// Set a 'heartbeat' every 5 minutes (5*60*1000) to keep connection to SQL server, as well as anything else.
+setInterval(function() {
+	conn.query("SELECT 1");
+},3000000);
 
 // Set up a small interface to allow me to interact with users through the bot
 bot.tcpListen(8080, '127.0.0.1');
