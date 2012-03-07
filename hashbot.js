@@ -388,7 +388,8 @@ oAuth = new OAuth("https://api.twitter.com/oauth/request_token", "https://api.tw
 // Set a 'heartbeat' every 5 minutes (5*60*1000) to keep connection to SQL server, as well as anything else.
 setInterval(function() {
 	conn.query("SELECT 1");
-},3000000);
+},
+3000000);
 
 // Set up a small interface to allow me to interact with users through the bot
 bot.tcpListen(8080, '127.0.0.1');
@@ -508,6 +509,12 @@ bot.on('speak', function(data) {
 	}
 	else if (data.text.match(/^!ask .*/i)) {
 		commandAsk(data);
+	}
+	else if (data.text.match(/^!fliptable/i)) {
+		bot.speak('(╯°□°)╯︵ ┻━┻');
+	}
+	else if (data.text.match(/^!fixtable/i)) {
+		bot.speak('┬─┬ノ( º _ ºノ)');
 	}
 });
 
