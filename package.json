@@ -3,25 +3,22 @@
   "name": "hashbot",
   "description": "A turntable.fm bot written on top of the Turntable API",
   "keywords": ["turntable.fm", "turntable", "bot"],
-  "version": "0.1.2",
+  "version": "0.2.0",
   "repository": {
     "type": "git",
     "url": "git@github.com:gabrielpreston/hashbot.git"
   },
-  "main": "hashbot.js",
-  "scripts": {
-    "start": "./hashbot.js"
+  "main": "lib/index.js",
+  "directories": {
+    "lib": "lib"
   },
+  "scripts": {},
   "engines": {
     "node": ">= v0.4.0"
   },
   "dependencies": {
-    "ttapi": ">= v1.0.8",
-	"mysql": ">= v0.9.4",
-	"oauth": ">= v0.9.5",
-	"timeago": ">= v0.0.2",
-	"bitly": ">= v1.2.2",
-	"wolfram": ">= 0.2.0"
+    "ttapi": ">= v1.4.2",
+	"mongoose": ">= v2.6.5",
   },
   "devDependencies": {}
 }
