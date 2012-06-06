@@ -1,3 +1,5 @@
+#!/usr/bin/node
+
 // Features to be added?
 //    !lame <enable|disable> [ADDED]
 //    !seen <user> [ADDED]
@@ -24,14 +26,22 @@
 //       Switch to Sequelize? http://sequelizejs.com/#installation
 //
 var config = require('./config').config;
+var util = require('util');
 var Bot = require('ttapi');
 var Mysql = require('mysql');
-var OAuth = require('oauth').OAuth;
 var timeago = require('timeago');
-var Bitly = require('bitly');
-var bitly = new Bitly(config.BITLYUSER, config.BITLYAPIKEY);
 var bot = new Bot(config.AUTH, config.USERID, config.ROOMID);
-var wolfram = require('wolfram').createClient(config.WOLFRAM);
+var OAuth = require('oauth').OAuth;
+if (config.BITLYUSER != '') {
+	var Bitly = require('bitly');
+	var bitly = new Bitly(config.BITLYUSER, config.BITLYAPIKEY);
+}
+if (config.WOLFRAM != '') {
+	var wolfram = require('wolfram').createClient(config.WOLFRAM);
+}
+if (config.TWITTERCONSUMERKEY != '') {
+	var oAuth = new OAuth("https://api.twitter.com/oauth/request_token", "https://api.twitter.com/oauth/access_token", config.TWITTERCONSUMERKEY, config.TWITTERCONSUMERSECRET, "1.0A", null, "HMAC-SHA1");
+}
 var conn = connect_datasource();
 
 var usersList = {};
@@ -43,6 +53,8 @@ var currentRoom = null;
 var ruleLame = 1;
 var tcpUser = 0;
 var tcpSocket = null;
+
+var botplayList = [];
 
 String.prototype.trim = function() {
 	return this.replace(/^\s+|\s+$/g, '');
@@ -56,6 +68,33 @@ function contains(a, obj) {
 		}
 	}
 	return false;
+}
+
+function buildBotPlaylist(display) {
+	botplayList = [];
+	bot.playlistAll(function(data) {
+		var playList = data.list;
+		var song;
+		for (var i = 0; i < playList.length; i++) {
+			song = playList[i];
+			song.order = i;
+			botplayList[song._id] = song;
+		}
+		if (display) {
+			console.log(util.inspect(botplayList,true,null));
+		}
+	});
+}
+
+function burySong(id) {
+	if (botplayList.hasOwnProperty(id)) {
+		var current = botplayList[id].order;
+		var bottom = botplayList.length - 1;
+		log('Found song '+id+' at position '+current+' of bot\'s playlist ('+bottom+' songs total)');
+		bot.playlistReorder(current,bottom,function() {
+			log('Moved song '+id+' from '+current+' to '+bottom);
+		});
+	}
 }
 
 function commandLame(data) {
@@ -224,17 +263,28 @@ function commandAsk(data) {
 
 function sendTweet(data) {
 	var url_regex = config.URLREGEX;
-	if (result = data.match(url_regex)) {
+	if (result = data.match(url_regex) && config.BITLYUSER != '') {
 		var long_url = result[0];
-		log('Found URL: ' + long_url);
-		bitly.shorten(long_url, function(err, response) {
-			if (err) {
-				throw err;
-			}
-			var short_url = response.data.url
-			data = data.replace(long_url, short_url);
-			bot.speak('I shortened your tweet to: ' + data);
-		});
+		if (long_url != undefined) {
+			log('Found URL: ' + long_url);
+			bitly.shorten(long_url, function(err, response) {
+				if (err) {
+					throw err;
+				}
+				if (response.data.url != undefined) {
+					var short_url = response.data.url
+					data = data.replace(long_url, short_url);
+					bot.speak('I shortened your tweet to: ' + data);
+				}
+				else {
+					log('Failed to get good response from Bitly:');
+					console.log(util.inspect(response,true,null));
+				}
+			});
+		}
+		else {
+			console.log(util.inspect(result,true,null));
+		}
 	}
 
 	if (data.length > 140) {
@@ -245,7 +295,7 @@ function sendTweet(data) {
 	},
 	function(error, data) {
 		if (error) {
-			console.log(require('sys').inspect(error));
+			console.log(util.inspect(error,true,null));
 		}
 		else {
 			// console.log(data);
@@ -303,6 +353,8 @@ function newSong(data) {
 	var current_song = data.current_song;
 
 	var song_id = current_song._id;
+
+	burySong(song_id);
 
 	var song = current_song.metadata;
 	song.lastPlayed = new Date();
@@ -383,8 +435,6 @@ function upvoteCheck(data) {
 
 log("STARTING UP!");
 
-oAuth = new OAuth("https://api.twitter.com/oauth/request_token", "https://api.twitter.com/oauth/access_token", config.TWITTERCONSUMERKEY, config.TWITTERCONSUMERSECRET, "1.0A", null, "HMAC-SHA1");
-
 // Set a 'heartbeat' every 5 minutes (5*60*1000) to keep connection to SQL server, as well as anything else.
 setInterval(function() {
 	conn.query("SELECT 1");
@@ -408,10 +458,7 @@ bot.on('tcpMessage', function(socket, msg) {
 	}
 	else if (msg.match(/^playlist info$/)) {
 		bot.playlistAll(function(data) {
-			for (var i = 0; i < data.list.length; i++) {
-				var song = data.list[i];
-				log(song);
-			}
+			buildBotPlaylist(true);
 		});
 	}
 	else if (msg.match(/^say/)) {
@@ -504,10 +551,10 @@ bot.on('speak', function(data) {
 	else if (data.text.match(/^!dj .*/i)) {
 		commandDj(data);
 	}
-	else if (data.text.match(/^!tweet .*/i)) {
+	else if (data.text.match(/^!tweet .*/i) && config.TWITTERCONSUMERKEY != '') {
 		commandTweet(data);
 	}
-	else if (data.text.match(/^!ask .*/i)) {
+	else if (data.text.match(/^!ask .*/i) && config.WOLFRAM != '') {
 		commandAsk(data);
 	}
 	else if (data.text.match(/^!fliptable/i)) {
@@ -546,6 +593,7 @@ bot.on('update_votes', function(data) {
 			log('Adding ' + currentSong.artist + ' - ' + currentSong.song + ' to my playlist.');
 			bot.snag();
 			bot.playlistAdd(currentSong.id);
+			burySong(currentSong.id);
 		}
 	}
 });
