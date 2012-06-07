@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "ttapi": ">= v1.4.2",
-	"mongoose": ">= v2.6.5",
+    "mongoose": ">= v2.6.5"
   },
   "devDependencies": {}
 }
